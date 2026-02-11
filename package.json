@@ -1,0 +1,13 @@
+{
+  "name": "tg-duo",
+  "version": "1.0.0",
+  "description": "Duo API proxy server for Auth and Admin endpoints",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@duosecurity/duo_api": "^1.5.0",
+    "dotenv": "^16.4.7"
+  }
+}
