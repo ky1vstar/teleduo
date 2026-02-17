@@ -1,0 +1,21 @@
+{
+  "name": "tg-duo",
+  "version": "1.0.0",
+  "description": "Duo API proxy server for Auth and Admin endpoints (Firebase Cloud Functions)",
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "serve": "firebase emulators:start --only functions & sleep 3 && node ../dev-proxy.js",
+    "serve:emulator": "firebase emulators:start --only functions",
+    "serve:proxy": "node ../dev-proxy.js",
+    "deploy": "firebase deploy --only functions"
+  },
+  "dependencies": {
+    "@duosecurity/duo_api": "^1.5.0",
+    "express": "^4.21.2",
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.3.0"
+  }
+}
