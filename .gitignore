@@ -7,5 +7,7 @@ node_modules
 .firebaserc
 firebase-debug.log
 firebase-debug.*.log
+firestore-debug.log
+firestore-debug.*.log
 ui-debug.log
 *.local

@@ -1,5 +1,5 @@
 {
-  "name": "tg-duo",
+  "name": "teleduo",
   "version": "1.0.0",
   "description": "Duo API proxy server for Auth and Admin endpoints (Firebase Cloud Functions)",
   "main": "index.js",
@@ -14,8 +14,11 @@
   },
   "dependencies": {
     "@duosecurity/duo_api": "^1.5.0",
+    "@grammyjs/i18n": "^1.1.2",
     "express": "^4.21.2",
     "firebase-admin": "^13.0.0",
-    "firebase-functions": "^6.3.0"
+    "firebase-functions": "^6.3.0",
+    "grammy": "^1.35.0",
+    "qrcode": "^1.5.4"
   }
 }

@@ -139,6 +139,15 @@ function verifySignature(req, ikey, skey, extractParams, routePrefix) {
   }
 
   if (!signaturesMatch(providedSig, expectedSig)) {
+    logger.warn("Signature mismatch debug", {
+      method,
+      host,
+      duoPath,
+      date,
+      isV5,
+      paramsKeys: Object.keys(extractParams(req)),
+      providedSigLen: providedSig.length,
+    });
     return { ok: false, code: 40103, reason: "Invalid signature in request credentials" };
   }
 

@@ -1,141 +1,78 @@
 const { onRequest } = require("firebase-functions/v2/https");
-const { defineString } = require("firebase-functions/params");
+const functions = require("firebase-functions/v1");
 const logger = require("firebase-functions/logger");
 const express = require("express");
-const querystring = require("querystring");
-const duo_api = require("@duosecurity/duo_api");
 const { duoSignatureMiddleware } = require("./duo_signature");
+const { AUTH_IKEY, AUTH_SKEY } = require("./config");
+const { extractParams } = require("./helpers");
 
-// ── Firebase Parameterized configuration ─────────────────────────────────────
+// ── Auth endpoint handlers ───────────────────────────────────────────────────
 
-const DUO_HOST = defineString("DUO_HOST");
-const AUTH_IKEY = defineString("AUTH_IKEY");
-const AUTH_SKEY = defineString("AUTH_SKEY");
-const ADMIN_IKEY = defineString("ADMIN_IKEY");
-const ADMIN_SKEY = defineString("ADMIN_SKEY");
+const { handlePing } = require("./auth/ping");
+const { handleCheck } = require("./auth/check");
+const { handleEnroll } = require("./auth/enroll");
+const { handleEnrollStatus } = require("./auth/enrollStatus");
+const { handlePreauth } = require("./auth/preauth");
+const { handleAuth } = require("./auth/auth");
+const { handleAuthStatus } = require("./auth/authStatus");
+const { handleLogo } = require("./auth/logo");
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── QR endpoint ──────────────────────────────────────────────────────────────
 
-// Generate a short unique id for correlating request / response logs
-let reqCounter = 0;
-function nextReqId() {
-  return `req-${++reqCounter}`;
-}
+const { handleQr } = require("./frame/qr");
+const { handlePortalEnroll } = require("./frame/portalEnroll");
 
-// Parse multipart/form-data body into a plain key-value object.
-// Handles only simple text fields (no file uploads), which is sufficient
-// for Duo API params.
-function parseMultipart(rawBody, boundary) {
-  const params = {};
-  const parts = rawBody.split(`--${boundary}`);
-  for (const part of parts) {
-    if (!part || part.trim() === "--" || part.trim() === "") continue;
+// ── Admin API (proxy to Duo, unchanged logic) ────────────────────────────────
 
-    const headerEnd = part.indexOf("\r\n\r\n");
-    if (headerEnd === -1) continue;
+const { adminApp } = require("./admin");
 
-    const headerSection = part.substring(0, headerEnd);
-    const value = part.substring(headerEnd + 4).replace(/\r\n$/, "");
+// ── Telegram webhook ─────────────────────────────────────────────────────────
 
-    const nameMatch = headerSection.match(/name="([^"]+)"/);
-    if (nameMatch) {
-      params[nameMatch[1]] = value;
-    }
-  }
-  return params;
-}
+const { createTelegramWebhookApp } = require("./telegram/webhook");
 
-// Extract params from Express request depending on content type
-function extractParams(req) {
-  const method = req.method.toUpperCase();
+// ── Triggers ─────────────────────────────────────────────────────────────────
 
-  if (["POST", "PUT", "PATCH"].includes(method)) {
-    const ct = (req.headers["content-type"] || "").toLowerCase();
+const { onUserDeleted: onUserDeletedHandler } = require("./triggers/onUserDeleted");
+const { lazyCleanup } = require("./triggers/cleanupExpired");
 
-    if (ct.includes("application/json")) {
-      return req.body || {};
-    }
+// ── Auth API Express app (standalone Duo-compatible) ─────────────────────────
 
-    if (ct.includes("multipart/form-data")) {
-      const boundaryMatch = (req.headers["content-type"] || "").match(
-        /boundary=(.+)/i
-      );
-      if (boundaryMatch) {
-        // Express may provide rawBody as a Buffer
-        const raw =
-          typeof req.rawBody === "string"
-            ? req.rawBody
-            : req.rawBody
-              ? req.rawBody.toString()
-              : "";
-        return parseMultipart(raw, boundaryMatch[1]);
-      }
-      return {};
-    }
-
-    // application/x-www-form-urlencoded – Express parses it into req.body
-    if (typeof req.body === "string") {
-      return querystring.parse(req.body);
-    }
-    return req.body || {};
-  }
-
-  // GET / DELETE – params from query string
-  return req.query || {};
-}
-
-// ── Duo proxy handler (shared by both /auth and /admin routes) ───────────────
-
-function duoProxyHandler(client, routePrefix) {
-  return (req, res) => {
-    const reqId = nextReqId();
-    const method = req.method.toUpperCase();
-    // req.path is relative to the mount point, e.g. /v2/enroll
-    // Reconstruct the full Duo API path: /<prefix>/v2/enroll
-    const duoPath = `/${routePrefix}${req.path}`;
-    const params = extractParams(req);
-
-    logger.info("Incoming request", {
-      reqId,
-      method,
-      url: req.originalUrl,
-      headers: req.headers,
-      duoPath,
-      params,
-    });
-
-    client.jsonApiCall(method, duoPath, params, (duoResponse) => {
-      logger.info("Duo response", {
-        reqId,
-        duoPath,
-        response: duoResponse,
-      });
-
-      const statusCode = duoResponse.stat === "OK" ? 200 : 400;
-      res.status(statusCode).json(duoResponse);
-    });
-  };
-}
-
-// ── Express apps ─────────────────────────────────────────────────────────────
-
-// Auth API app
 const authApp = express();
-authApp.use(duoSignatureMiddleware(() => AUTH_IKEY.value(), () => AUTH_SKEY.value(), extractParams, "auth"));
-authApp.all("*", (req, res) => {
-  const client = new duo_api.Client(AUTH_IKEY.value(), AUTH_SKEY.value(), DUO_HOST.value());
-  duoProxyHandler(client, "auth")(req, res);
-});
 
-// Admin API app
-const adminApp = express();
-adminApp.use(duoSignatureMiddleware(() => ADMIN_IKEY.value(), () => ADMIN_SKEY.value(), extractParams, "admin"));
-adminApp.all("*", (req, res) => {
-  const client = new duo_api.Client(ADMIN_IKEY.value(), ADMIN_SKEY.value(), DUO_HOST.value());
-  duoProxyHandler(client, "admin")(req, res);
-});
+// /auth/v2/ping — no signature verification
+authApp.get("/v2/ping", handlePing);
+
+// Lazy cleanup of expired documents (fire-and-forget, throttled)
+authApp.use((req, res, next) => { lazyCleanup(); next(); });
+
+// All other /auth/v2/* endpoints require HMAC signature verification
+authApp.use(
+  duoSignatureMiddleware(
+    () => AUTH_IKEY.value(),
+    () => AUTH_SKEY.value(),
+    extractParams,
+    "auth"
+  )
+);
+
+authApp.get("/v2/check", handleCheck);
+authApp.post("/v2/enroll", handleEnroll);
+authApp.post("/v2/enroll_status", handleEnrollStatus);
+authApp.post("/v2/preauth", handlePreauth);
+authApp.post("/v2/auth", handleAuth);
+authApp.get("/v2/auth_status", handleAuthStatus);
+authApp.get("/v2/logo", handleLogo);
+
+// ── Frame app (QR code generation, no auth) ──────────────────────────────────
+
+const frameApp = express();
+frameApp.get("/qr", handleQr);
+frameApp.get("/portal/v4/enroll", handlePortalEnroll);
 
 // ── Cloud Functions (2nd gen) ────────────────────────────────────────────────
 
 exports.auth = onRequest(authApp);
 exports.admin = onRequest(adminApp);
+exports.frame = onRequest(frameApp);
+exports.telegramWebhook = onRequest(createTelegramWebhookApp());
+exports.onUserDeleted = functions.auth.user().onDelete(onUserDeletedHandler);

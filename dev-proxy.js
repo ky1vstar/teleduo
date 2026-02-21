@@ -8,17 +8,17 @@ const EMULATOR_PORT = 5001;
 const PROJECT_ID = "teleduo-9cc0f";
 const REGION = "us-central1";
 
-// Maps /auth/* and /admin/* to the emulator's full function path
-const PREFIXES = ["auth", "admin"];
+// Maps /auth/*, /admin/*, /frame/*, and /telegramWebhook to the emulator's full function path
+const PREFIXES = ["auth", "admin", "frame", "telegramWebhook"];
 
 // ── Proxy server ─────────────────────────────────────────────────────────────
 
 const server = http.createServer((clientReq, clientRes) => {
-  const match = clientReq.url.match(/^\/(auth|admin)(\/.*)?$/);
+  const match = clientReq.url.match(/^\/(auth|admin|frame|telegramWebhook)(\/.*)?$/);
 
   if (!match) {
     clientRes.writeHead(404, { "Content-Type": "application/json" });
-    clientRes.end(JSON.stringify({ error: "Unknown route. Expected /auth or /admin." }));
+    clientRes.end(JSON.stringify({ error: "Unknown route. Expected /auth, /admin, /frame, or /telegramWebhook." }));
     return;
   }
 
@@ -59,6 +59,8 @@ const server = http.createServer((clientReq, clientRes) => {
 
 server.listen(PROXY_PORT, () => {
   console.log(`Dev proxy listening on http://127.0.0.1:${PROXY_PORT}`);
-  console.log(`  /auth/*  → http://${EMULATOR_HOST}:${EMULATOR_PORT}/${PROJECT_ID}/${REGION}/auth/*`);
-  console.log(`  /admin/* → http://${EMULATOR_HOST}:${EMULATOR_PORT}/${PROJECT_ID}/${REGION}/admin/*`);
+  console.log(`  /auth/*             → http://${EMULATOR_HOST}:${EMULATOR_PORT}/${PROJECT_ID}/${REGION}/auth/*`);
+  console.log(`  /admin/*            → http://${EMULATOR_HOST}:${EMULATOR_PORT}/${PROJECT_ID}/${REGION}/admin/*`);
+  console.log(`  /frame/*            → http://${EMULATOR_HOST}:${EMULATOR_PORT}/${PROJECT_ID}/${REGION}/frame/*`);
+  console.log(`  /telegramWebhook/*  → http://${EMULATOR_HOST}:${EMULATOR_PORT}/${PROJECT_ID}/${REGION}/telegramWebhook/*`);
 });
