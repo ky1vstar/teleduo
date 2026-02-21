@@ -88,6 +88,40 @@ function getRawBody(req) {
 
 // ── Signature verification ───────────────────────────────────────────────────
 
+// Lazily yield candidate HMAC signatures for the incoming request.
+// Duo clients may use sig_version 2 or 5 with sha1 or sha512 in any
+// combination, and Content-Type is NOT a reliable indicator of which version
+// was used (e.g. sig_version=5 GET requests omit Content-Type: application/json).
+// We try the two standard pairings first (v5+sha512, v2+sha1), then the two
+// non-standard ones (v2+sha512, v5+sha1). Canonical strings are computed
+// lazily so we only pay for what we actually need.
+function* candidateSignatures(req, skey, extractParams, routePrefix) {
+  const date = req.headers["x-duo-date"] || req.headers["date"] || "";
+  const method = req.method.toUpperCase();
+  const host = (req.headers["host"] || "").toLowerCase();
+  const duoPath = `/${routePrefix}${req.path}`;
+  const isBodyMethod = ["POST", "PUT", "PATCH"].includes(method);
+  const rawBody = getRawBody(req);
+
+  // v2 params: extracted from body / query string
+  // v5 params: body methods → params empty (body goes into hash); else query
+  let v2Canon, v5Canon;
+  const getV2Canon = () => (v2Canon ??= canonicalize(
+    method, host, duoPath, extractParams(req), date));
+  const getV5Canon = () => (v5Canon ??= canonicalizeV5(
+    method, host, duoPath,
+    isBodyMethod ? {} : (req.query || {}), date,
+    isBodyMethod ? rawBody : ""));
+
+  // Standard pairings first
+  yield hmacSign(skey, getV5Canon(), "sha512"); // v5 + sha512
+  yield hmacSign(skey, getV2Canon(), "sha1");   // v2 + sha1
+
+  // Non-standard but supported
+  yield hmacSign(skey, getV2Canon(), "sha512"); // v2 + sha512
+  yield hmacSign(skey, getV5Canon(), "sha1");   // v5 + sha1
+}
+
 // Verify the incoming request's Authorization header against the expected
 // ikey/skey pair. Returns { ok: true } or { ok: false, reason: "..." }.
 function verifySignature(req, ikey, skey, extractParams, routePrefix) {
@@ -109,49 +143,26 @@ function verifySignature(req, ikey, skey, extractParams, routePrefix) {
     return { ok: false, code: 40102, reason: "Invalid integration key in request credentials" };
   }
 
-  const date = req.headers["x-duo-date"] || req.headers["date"] || "";
-  const method = req.method.toUpperCase();
-  const host = (req.headers["host"] || "").toLowerCase();
-  const duoPath = `/${routePrefix}${req.path}`;
-  const ct = (req.headers["content-type"] || "").toLowerCase();
-  const isV5 = ct.includes("application/json");
-
-  let expectedSig;
-
-  if (isV5) {
-    const isBodyMethod = ["POST", "PUT", "PATCH"].includes(method);
-    const rawBody = getRawBody(req);
-    const params = isBodyMethod ? {} : (req.query || {});
-    const body = isBodyMethod ? rawBody : "";
-    const canon = canonicalizeV5(method, host, duoPath, params, date, body);
-    expectedSig = hmacSign(skey, canon, "sha512");
-  } else {
-    const params = extractParams(req);
-    const canon = canonicalize(method, host, duoPath, params, date);
-
-    if (providedSig.length === 128) {
-      expectedSig = hmacSign(skey, canon, "sha512");
-    } else if (providedSig.length === 40) {
-      expectedSig = hmacSign(skey, canon, "sha1");
-    } else {
-      expectedSig = hmacSign(skey, canon, "sha512");
+  for (const sig of candidateSignatures(req, skey, extractParams, routePrefix)) {
+    if (signaturesMatch(providedSig, sig)) {
+      return { ok: true };
     }
   }
 
-  if (!signaturesMatch(providedSig, expectedSig)) {
-    logger.warn("Signature mismatch debug", {
-      method,
-      host,
-      duoPath,
-      date,
-      isV5,
-      paramsKeys: Object.keys(extractParams(req)),
-      providedSigLen: providedSig.length,
-    });
-    return { ok: false, code: 40103, reason: "Invalid signature in request credentials" };
-  }
+  const method = req.method.toUpperCase();
+  const host = (req.headers["host"] || "").toLowerCase();
+  const duoPath = `/${routePrefix}${req.path}`;
+  const date = req.headers["x-duo-date"] || req.headers["date"] || "";
 
-  return { ok: true };
+  logger.warn("Signature mismatch debug", {
+    method,
+    host,
+    duoPath,
+    date,
+    paramsKeys: Object.keys(extractParams(req)),
+    providedSigLen: providedSig.length,
+  });
+  return { ok: false, code: 40103, reason: "Invalid signature in request credentials" };
 }
 
 // ── Express middleware factory ────────────────────────────────────────────────
