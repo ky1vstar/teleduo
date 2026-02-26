@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "express": "npm:express@4",
+    "@duosecurity/duo_api": "npm:@duosecurity/duo_api@1"
+  }
+}
