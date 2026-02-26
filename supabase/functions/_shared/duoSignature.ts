@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { Buffer } from "node:buffer";
-import { getRawBody } from "./helpers.ts";
+import { getRawBody, resolveSignatureHost } from "./helpers.ts";
+import type { Request, Response, NextFunction } from "express";
 
 // ── Duo signature helpers ────────────────────────────────────────────────────
 
@@ -90,38 +91,13 @@ function signaturesMatch(a: string, b: string): boolean {
 
 // ── Request helpers ──────────────────────────────────────────────────────────
 
-const DEFAULT_PORTS: Record<string, string> = { http: "80", https: "443" };
-
-/**
- * Resolve the canonical host for Duo signature verification.
- * Prefers x-forwarded-host / x-forwarded-port (set by the Supabase gateway),
- * omitting the port when it matches the protocol default (80/443).
- */
-// deno-lint-ignore no-explicit-any
-function resolveHost(req: any): string {
-  const fwdHost: string | undefined = req.headers["x-forwarded-host"];
-  if (fwdHost) {
-    const proto: string = (
-      req.headers["x-forwarded-proto"] || "http"
-    ).toLowerCase();
-    const fwdPort: string | undefined = req.headers["x-forwarded-port"];
-    const host = fwdHost.toLowerCase();
-    if (fwdPort && fwdPort !== DEFAULT_PORTS[proto]) {
-      return `${host}:${fwdPort}`;
-    }
-    return host;
-  }
-  return (req.headers["host"] || "").toLowerCase();
-}
-
 /**
  * Resolve the canonical Duo API path from the original request URL.
  * Prefers x-forwarded-path (set by the Supabase gateway) which contains the
  * full path the client actually used (e.g. /functions/v1/auth/v2/check).
  * Falls back to req.originalUrl. Strips query string, keeps leading slash.
  */
-// deno-lint-ignore no-explicit-any
-function resolveDuoPath(req: any): string {
+function resolveDuoPath(req: Request): string {
   const raw: string = req.originalUrl || req.url || "/";
   const qIdx = raw.indexOf("?");
   return qIdx === -1 ? raw : raw.substring(0, qIdx);
@@ -130,14 +106,13 @@ function resolveDuoPath(req: any): string {
 // ── Signature verification ───────────────────────────────────────────────────
 
 function* candidateSignatures(
-  // deno-lint-ignore no-explicit-any
-  req: any,
+  req: Request,
   skey: string,
-  extractParamsFn: (req: unknown) => Record<string, string>,
+  extractParamsFn: (req: Request) => Record<string, string>,
 ): Generator<string> {
   const date: string = req.headers["x-duo-date"] || req.headers["date"] || "";
   const method: string = req.method.toUpperCase();
-  const host = resolveHost(req);
+  const host = resolveSignatureHost(req);
   const duoPath = resolveDuoPath(req);
   const isBodyMethod = ["POST", "PUT", "PATCH"].includes(method);
   const rawBody = getRawBody(req);
@@ -157,7 +132,7 @@ function* candidateSignatures(
       method,
       host,
       duoPath,
-      isBodyMethod ? {} : (req.query || {}),
+      isBodyMethod ? {} : ((req.query || {}) as Record<string, string>),
       date,
       isBodyMethod ? rawBody : "",
     ));
@@ -169,11 +144,10 @@ function* candidateSignatures(
 }
 
 function verifySignature(
-  // deno-lint-ignore no-explicit-any
-  req: any,
+  req: Request,
   ikey: string,
   skey: string,
-  extractParamsFn: (req: unknown) => Record<string, string>,
+  extractParamsFn: (req: Request) => Record<string, string>,
 ): { ok: boolean; code?: number; reason?: string } {
   const authHeader: string = req.headers["authorization"] || "";
   if (!authHeader.startsWith("Basic ")) {
@@ -208,7 +182,7 @@ function verifySignature(
   }
 
   const method = req.method.toUpperCase();
-  const host = resolveHost(req);
+  const host = resolveSignatureHost(req);
   const duoPath = resolveDuoPath(req);
   const date = req.headers["x-duo-date"] || req.headers["date"] || "";
 
@@ -232,10 +206,9 @@ function verifySignature(
 export function duoSignatureMiddleware(
   ikey: string,
   skey: string,
-  extractParamsFn: (req: unknown) => Record<string, string>,
+  extractParamsFn: (req: Request) => Record<string, string>,
 ) {
-  // deno-lint-ignore no-explicit-any
-  return (req: any, res: any, next: any) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     const result = verifySignature(
       req,
       ikey,
@@ -246,8 +219,7 @@ export function duoSignatureMiddleware(
       console.warn("Signature verification failed", {
         reason: result.reason,
       });
-      // deno-lint-ignore no-explicit-any
-      const body: any = { stat: "FAIL", message: result.reason };
+      const body: Record<string, unknown> = { stat: "FAIL", message: result.reason };
       if (result.code) body.code = result.code;
       res.status(401).json(body);
       return;

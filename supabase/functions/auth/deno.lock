@@ -1,10 +1,16 @@
 {
   "version": "4",
   "specifiers": {
+    "jsr:@supabase/functions-js@^2.98.0": "2.98.0",
     "npm:@grammyjs/i18n@1": "1.1.2_grammy@1.40.0",
     "npm:@supabase/supabase-js@2": "2.97.0",
     "npm:express@4": "4.22.1",
     "npm:grammy@1": "1.40.0"
+  },
+  "jsr": {
+    "@supabase/functions-js@2.98.0": {
+      "integrity": "1925444dea4f040f8e840a31067aa06315fcb658f5abf2161504763d220d00e8"
+    }
   },
   "npm": {
     "@deno/shim-deno-test@0.5.0": {
@@ -544,6 +550,7 @@
   },
   "workspace": {
     "dependencies": [
+      "jsr:@supabase/functions-js@^2.98.0",
       "npm:@grammyjs/i18n@1",
       "npm:@supabase/supabase-js@2",
       "npm:express@4",

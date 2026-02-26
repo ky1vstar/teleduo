@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import express from "express";
+import type { Request, Response, NextFunction } from "express";
 import { Buffer } from "node:buffer";
 import duo_api from "@duosecurity/duo_api";
 
@@ -13,21 +14,19 @@ import { duoSignatureMiddleware } from "../_shared/duoSignature.ts";
 
 const app = express();
 
-// deno-lint-ignore no-explicit-any
-const captureRawBody = (req: any, _res: any, buf: Buffer) => {
-  req.rawBody = buf;
+const captureRawBody = (req: Request, _res: Response, buf: Buffer) => {
+  (req as Request & { rawBody?: Buffer }).rawBody = buf;
 };
-app.use(express.json({ verify: captureRawBody }));
-app.use(express.urlencoded({ extended: true, verify: captureRawBody }));
+app.use(express.json({ verify: captureRawBody as Parameters<typeof express.json>[0]["verify"] }));
+app.use(express.urlencoded({ extended: true, verify: captureRawBody as Parameters<typeof express.urlencoded>[0]["verify"] }));
 
 // Fallback: capture raw body for content types not handled above (e.g. multipart)
-// deno-lint-ignore no-explicit-any
-app.use((req: any, _res: any, next: any) => {
-  if (req.rawBody !== undefined) return next();
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  if ((req as Request & { rawBody?: Buffer }).rawBody !== undefined) return next();
   const chunks: Uint8Array[] = [];
   req.on("data", (chunk: Uint8Array) => chunks.push(chunk));
   req.on("end", () => {
-    req.rawBody = Buffer.concat(chunks);
+    (req as Request & { rawBody?: Buffer }).rawBody = Buffer.concat(chunks);
     next();
   });
   req.on("error", next);
@@ -44,8 +43,7 @@ app.use(
 
 // deno-lint-ignore no-explicit-any
 function duoProxyHandler(client: any) {
-  // deno-lint-ignore no-explicit-any
-  return (req: any, res: any) => {
+  return (req: Request, res: Response) => {
     const method: string = req.method.toUpperCase();
     // req.path already starts with /admin/..., map to Duo /admin/...
     const duoPath = req.path;
@@ -68,8 +66,7 @@ function duoProxyHandler(client: any) {
 }
 
 // All /admin/* requests are proxied to Duo
-// deno-lint-ignore no-explicit-any
-app.all("/admin/*", (req: any, res: any) => {
+app.all("/admin/*", (req: Request, res: Response) => {
   const client = new duo_api.Client(ADMIN_IKEY, ADMIN_SKEY, DUO_HOST);
   duoProxyHandler(client)(req, res);
 });

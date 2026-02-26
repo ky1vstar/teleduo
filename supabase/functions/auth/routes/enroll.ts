@@ -1,3 +1,4 @@
+import type { Request, Response } from "express";
 import { supabase } from "../../_shared/supabaseClient.ts";
 import { ENROLL_ALLOW_EXISTING } from "../../_shared/config.ts";
 import { getBotUsername } from "../../_shared/telegram/bot.ts";
@@ -6,12 +7,12 @@ import {
   generateActivationCode,
   generateRandomUsername,
   resolveEmail,
+  resolvePublicBaseUrl,
   duoError,
   duoSuccess,
 } from "../../_shared/helpers.ts";
 
-// deno-lint-ignore no-explicit-any
-export async function handleEnroll(req: any, res: any) {
+export async function handleEnroll(req: Request, res: Response) {
   try {
     const params = extractParams(req);
     const username: string = params.username || generateRandomUsername();
@@ -65,10 +66,8 @@ export async function handleEnroll(req: any, res: any) {
       expires_at: expiresAt,
     });
 
-    const cfHost = req.headers["host"] || req.hostname;
-    const protocol =
-      req.headers["x-forwarded-proto"] || req.protocol || "https";
-    const barcodeUrl = `${protocol}://${cfHost}/frame/qr?value=${encodeURIComponent(activationUrl)}`;
+    const baseUrl = resolvePublicBaseUrl(req);
+    const barcodeUrl = `${baseUrl}frame/qr?value=${encodeURIComponent(activationUrl)}`;
     const expiration = Math.floor(new Date(expiresAt).getTime() / 1000);
 
     duoSuccess(res, {

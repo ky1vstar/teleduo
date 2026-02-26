@@ -1,9 +1,11 @@
+import type { Request, Response } from "express";
 import crypto from "node:crypto";
 import { supabase } from "../../_shared/supabaseClient.ts";
 import {
   extractParams,
   resolveEmail,
   extractUsername,
+  resolvePublicBaseUrl,
   duoError,
   duoSuccess,
 } from "../../_shared/helpers.ts";
@@ -11,8 +13,7 @@ import {
 // ── Build portal enrollment response ─────────────────────────────────────────
 
 async function buildEnrollPortalResponse(
-  // deno-lint-ignore no-explicit-any
-  req: any,
+  req: Request,
   username: string,
 ): Promise<{ enroll_portal_url: string; result: string; status_msg: string }> {
   const { data: existing } = await supabase
@@ -35,10 +36,8 @@ async function buildEnrollPortalResponse(
     });
   }
 
-  const cfHost = req.headers["host"] || req.hostname;
-  const protocol =
-    req.headers["x-forwarded-proto"] || req.protocol || "https";
-  const enrollPortalUrl = `${protocol}://${cfHost}/frame/portal/v4/enroll?code=${code}`;
+  const baseUrl = resolvePublicBaseUrl(req);
+  const enrollPortalUrl = `${baseUrl}frame/portal/v4/enroll?code=${code}`;
 
   return {
     enroll_portal_url: enrollPortalUrl,
@@ -47,8 +46,7 @@ async function buildEnrollPortalResponse(
   };
 }
 
-// deno-lint-ignore no-explicit-any
-export async function handlePreauth(req: any, res: any) {
+export async function handlePreauth(req: Request, res: Response) {
   try {
     const params = extractParams(req);
     const userId = params.user_id || null;

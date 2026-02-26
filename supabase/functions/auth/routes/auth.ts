@@ -1,5 +1,7 @@
+import type { Request, Response } from "express";
+import "@supabase/functions-js/edge-runtime.d.ts";
 import { supabase } from "../../_shared/supabaseClient.ts";
-import { sendPushMessage } from "../../_shared/telegram/bot.ts";
+import { sendPushMessage, editPushMessage } from "../../_shared/telegram/bot.ts";
 import { t } from "../../_shared/telegram/i18n.ts";
 import {
   extractParams,
@@ -9,6 +11,58 @@ import {
   duoError,
   duoSuccess,
 } from "../../_shared/helpers.ts";
+
+// ── Background task: auto-expire Telegram message ───────────────────────────
+
+interface TelegramInfo {
+  chatId: number;
+  messageId: number;
+  locale: string;
+}
+
+function scheduleMessageExpiration(
+  txid: string,
+  telegram: TelegramInfo,
+  delayMs = 60000,
+): void {
+  const task = async () => {
+    try {
+      await new Promise((r) => setTimeout(r, delayMs));
+
+      const { data: tx } = await supabase
+        .from("auth_transactions")
+        .select("result")
+        .eq("txid", txid)
+        .single();
+
+      if (!tx || tx.result !== "waiting") return;
+
+      const now = new Date();
+      await supabase
+        .from("auth_transactions")
+        .update({
+          result: "deny",
+          status: "timeout",
+          status_msg: "Login timed out.",
+          resolved_at: now.toISOString(),
+        })
+        .eq("txid", txid)
+        .eq("result", "waiting");
+
+      const timeStr =
+        now.toISOString().replace("T", " ").substring(11, 19) + " UTC";
+      await editPushMessage(
+        telegram.chatId,
+        telegram.messageId,
+        t(telegram.locale, "push-result-timeout", { time: timeStr }),
+      );
+    } catch (err) {
+      console.error("Background expiration task failed", err);
+    }
+  };
+
+  EdgeRuntime.waitUntil(task());
+}
 
 // ── Long-poll helper (Realtime subscription) ─────────────────────────────────
 
@@ -20,7 +74,8 @@ interface AuthResult {
 
 async function waitForAuthResult(
   txid: string,
-  timeoutMs = 55000,
+  timeoutMs = 60000,
+  telegram?: TelegramInfo,
 ): Promise<AuthResult> {
   // Check if already resolved before subscribing
   const { data: existing } = await supabase
@@ -72,16 +127,27 @@ async function waitForAuthResult(
       settled = true;
       supabase.removeChannel(channel);
 
+      const now = new Date();
       await supabase
         .from("auth_transactions")
         .update({
           result: "deny",
           status: "timeout",
           status_msg: "Login timed out.",
-          resolved_at: new Date().toISOString(),
+          resolved_at: now.toISOString(),
         })
         .eq("txid", txid)
         .eq("result", "waiting");
+
+      if (telegram) {
+        const timeStr =
+          now.toISOString().replace("T", " ").substring(11, 19) + " UTC";
+        await editPushMessage(
+          telegram.chatId,
+          telegram.messageId,
+          t(telegram.locale, "push-result-timeout", { time: timeStr }),
+        );
+      }
 
       resolve({
         result: "deny",
@@ -213,8 +279,7 @@ function formatPushMessage(
 
 // ── Main handler ─────────────────────────────────────────────────────────────
 
-// deno-lint-ignore no-explicit-any
-export async function handleAuth(req: any, res: any) {
+export async function handleAuth(req: Request, res: Response) {
   try {
     const params = extractParams(req);
     const factor = params.factor;
@@ -288,25 +353,32 @@ export async function handleAuth(req: any, res: any) {
 
     // Send Telegram push
     const chatId = deviceData.telegram_chat_id;
-    if (chatId) {
-      const locale: string = deviceData.locale || "en";
-      const text = formatPushMessage(params, username, locale);
-      try {
-        const messageId = await sendPushMessage(chatId, text, txid, locale);
-        await supabase
-          .from("auth_transactions")
-          .update({ telegram_message_id: messageId })
-          .eq("txid", txid);
-      } catch (err) {
-        console.error("Failed to send Telegram push", err);
-      }
+    if (!chatId) {
+      return duoError(res, 40002, "Invalid request parameters", "no telegram chat linked");
     }
 
+    const locale: string = deviceData.locale || "en";
+    const text = formatPushMessage(params, username, locale);
+    let telegramMessageId: number;
+    try {
+      telegramMessageId = await sendPushMessage(chatId, text, txid, locale);
+      await supabase
+        .from("auth_transactions")
+        .update({ telegram_message_id: telegramMessageId })
+        .eq("txid", txid);
+    } catch (err) {
+      console.error("Failed to send Telegram push", err);
+      return duoError(res, 50001, "Failed to send push notification");
+    }
+
+    const telegramInfo: TelegramInfo = { chatId, messageId: telegramMessageId, locale };
+
     if (isAsync) {
+      scheduleMessageExpiration(txid, telegramInfo);
       return duoSuccess(res, { txid });
     }
 
-    const result = await waitForAuthResult(txid, 55000);
+    const result = await waitForAuthResult(txid, 60000, telegramInfo);
     duoSuccess(res, result);
   } catch (err) {
     console.error("auth error", err);

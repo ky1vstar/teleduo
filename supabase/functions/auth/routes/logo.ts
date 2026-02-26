@@ -1,9 +1,9 @@
+import type { Request, Response } from "express";
 import { Buffer } from "node:buffer";
 import { LOGO_URL } from "../../_shared/config.ts";
 import { duoError } from "../../_shared/helpers.ts";
 
-// deno-lint-ignore no-explicit-any
-export async function handleLogo(_req: any, res: any) {
+export async function handleLogo(_req: Request, res: Response) {
   try {
     if (!LOGO_URL) return duoError(res, 40401, "Resource not found");
 

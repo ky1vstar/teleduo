@@ -1,7 +1,7 @@
+import type { Request, Response } from "express";
 import QRCode from "qrcode";
 
-// deno-lint-ignore no-explicit-any
-export async function handleQr(req: any, res: any) {
+export async function handleQr(req: Request, res: Response) {
   try {
     const value = req.query.value;
     if (!value) {

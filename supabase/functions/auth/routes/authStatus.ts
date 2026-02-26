@@ -1,8 +1,8 @@
+import type { Request, Response } from "express";
 import { supabase } from "../../_shared/supabaseClient.ts";
 import { extractParams, duoError, duoSuccess } from "../../_shared/helpers.ts";
 
-// deno-lint-ignore no-explicit-any
-export async function handleAuthStatus(req: any, res: any) {
+export async function handleAuthStatus(req: Request, res: Response) {
   try {
     const params = extractParams(req);
     const txid = params.txid;

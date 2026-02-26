@@ -1,3 +1,4 @@
+import type { Request, Response } from "express";
 import { supabase } from "../../_shared/supabaseClient.ts";
 import {
   extractParams,
@@ -5,8 +6,7 @@ import {
   duoSuccess,
 } from "../../_shared/helpers.ts";
 
-// deno-lint-ignore no-explicit-any
-export async function handleEnrollStatus(req: any, res: any) {
+export async function handleEnrollStatus(req: Request, res: Response) {
   try {
     const params = extractParams(req);
     const userId = params.user_id;
@@ -45,8 +45,9 @@ export async function handleEnrollStatus(req: any, res: any) {
       .eq("activation_code", code)
       .maybeSingle();
 
-    if (!enrollData) return duoSuccess(res, "invalid");
-    if (enrollData.user_id !== userId) return duoSuccess(res, "invalid");
+    if (!enrollData || enrollData.user_id !== userId) {
+      return duoError(res, 40002, "Invalid request parameters", "activation_code");
+    }
     if (new Date(enrollData.expires_at) < new Date()) {
       return duoSuccess(res, "invalid");
     }

@@ -96,15 +96,6 @@ ALTER TABLE public.auth_transactions ENABLE ROW LEVEL SECURITY;
 -- Enable realtime for auth_transactions (used for sync long-poll)
 ALTER PUBLICATION supabase_realtime ADD TABLE public.auth_transactions;
 
--- ── Cleanup meta ─────────────────────────────────────────────────────────────
-
-CREATE TABLE public.cleanup_meta (
-  key      TEXT PRIMARY KEY,
-  last_run TIMESTAMPTZ
-);
-
-ALTER TABLE public.cleanup_meta ENABLE ROW LEVEL SECURITY;
-
 -- ── Cascade delete on auth.users removal ─────────────────────────────────────
 
 CREATE OR REPLACE FUNCTION public.handle_user_deleted()
@@ -125,50 +116,42 @@ CREATE TRIGGER on_auth_user_deleted
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_user_deleted();
 
--- ── Expired-document cleanup functions ───────────────────────────────────────
+-- ── pg_cron extension ─────────────────────────────────────────────────────────
 
-CREATE OR REPLACE FUNCTION public.cleanup_expired_documents()
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+-- ── Expired-record cleanup function ──────────────────────────────────────────
+
+CREATE OR REPLACE FUNCTION public.cleanup_expired_records(
+  cutoff INTERVAL DEFAULT INTERVAL '24 hours'
+)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  cutoff TIMESTAMPTZ := now() - INTERVAL '24 hours';
-  cnt    INTEGER;
+  cutoff_ts TIMESTAMPTZ := now() - cutoff;
+  cnt       INTEGER;
 BEGIN
-  DELETE FROM enrollments WHERE expires_at < cutoff;
+  DELETE FROM enrollments WHERE expires_at < cutoff_ts;
   GET DIAGNOSTICS cnt = ROW_COUNT;
   IF cnt > 0 THEN RAISE LOG 'Cleaned up % expired enrollments', cnt; END IF;
 
-  DELETE FROM portal_enrollments WHERE expires_at < cutoff;
+  DELETE FROM portal_enrollments WHERE expires_at < cutoff_ts;
   GET DIAGNOSTICS cnt = ROW_COUNT;
   IF cnt > 0 THEN RAISE LOG 'Cleaned up % expired portal_enrollments', cnt; END IF;
 
-  DELETE FROM auth_transactions WHERE expires_at < cutoff;
+  DELETE FROM auth_transactions WHERE expires_at < cutoff_ts;
   GET DIAGNOSTICS cnt = ROW_COUNT;
   IF cnt > 0 THEN RAISE LOG 'Cleaned up % expired auth_transactions', cnt; END IF;
 END;
 $$;
 
--- Throttled wrapper — runs cleanup at most once per 24 h
-CREATE OR REPLACE FUNCTION public.cleanup_expired_if_needed()
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  last TIMESTAMPTZ;
-BEGIN
-  SELECT last_run INTO last FROM cleanup_meta WHERE key = 'cleanup';
+-- ── Scheduled cleanup job (every 24 hours) ───────────────────────────────────
 
-  IF last IS NULL OR EXTRACT(EPOCH FROM (now() - last)) > 86400 THEN
-    INSERT INTO cleanup_meta (key, last_run)
-    VALUES ('cleanup', now())
-    ON CONFLICT (key) DO UPDATE SET last_run = now();
-
-    PERFORM cleanup_expired_documents();
-  END IF;
-END;
-$$;
+SELECT cron.schedule(
+  'cleanup-expired-records',
+  '0 */24 * * *',
+  $$SELECT public.cleanup_expired_records()$$
+);

@@ -1,3 +1,4 @@
+import type { Request, Response } from "express";
 import { supabase } from "../../_shared/supabaseClient.ts";
 import { getBotUsername } from "../../_shared/telegram/bot.ts";
 import {
@@ -13,8 +14,7 @@ h1{font-size:22px;margin:0 0 12px}p{color:#666;margin:0}</style></head>
 <body><div class="card"><h1>Enrollment link expired</h1>
 <p>Your enrollment link sent by email has expired. Contact your IT help desk for a new link.</p></div></body></html>`;
 
-// deno-lint-ignore no-explicit-any
-export async function handlePortalEnroll(req: any, res: any) {
+export async function handlePortalEnroll(req: Request, res: Response) {
   try {
     const code = req.query.code;
     if (!code) return res.status(400).send("Missing code parameter");
