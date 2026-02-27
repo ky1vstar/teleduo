@@ -1,17 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ENV_FILE="supabase/functions/.env"
 PORT=54321
 WEBHOOK_PATH="/functions/v1/telegram-webhook"
 
-# 1. Read TELEGRAM_BOT_TOKEN from .env
-BOT_TOKEN=$(grep '^TELEGRAM_BOT_TOKEN=' "$ENV_FILE" | cut -d'=' -f2-)
-if [[ -z "$BOT_TOKEN" ]]; then
-  echo "Error: TELEGRAM_BOT_TOKEN not found in $ENV_FILE"
-  exit 1
-fi
-echo "Bot token loaded."
+# 1. Load environment variables from .env
+function load_env() {
+  local env_file="$1"
+  if [[ -f "$env_file" ]]; then
+    set -o allexport
+    source "$env_file"
+    set +o allexport
+    echo "Environment variables loaded from $env_file"
+  fi
+}
+
+load_env "supabase/functions/.env"
+load_env "supabase/functions/.env.local"
 
 # 2. Start ngrok in background
 echo "Starting ngrok on port $PORT..."
@@ -38,8 +43,13 @@ echo "Ngrok URL: $PUBLIC_URL"
 # 4. Set Telegram webhook
 WEBHOOK_URL="${PUBLIC_URL}${WEBHOOK_PATH}"
 echo "Setting webhook to: $WEBHOOK_URL"
-curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/setWebhook" \
-  -d "url=${WEBHOOK_URL}" | jq .
+WEBHOOK_ARGS="url=${WEBHOOK_URL}"
+if [[ -n "${TELEGRAM_WEBHOOK_SECRET:-}" ]]; then
+  WEBHOOK_ARGS+="&secret_token=${TELEGRAM_WEBHOOK_SECRET}"
+  echo "Using secret_token for webhook"
+fi
+curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
+  -d "${WEBHOOK_ARGS}" | jq .
 
 echo ""
 echo "ngrok running (PID $NGROK_PID). Press Ctrl+C to stop."

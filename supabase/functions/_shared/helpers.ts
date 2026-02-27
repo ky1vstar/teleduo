@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import type { Request, Response } from "express";
+import { validate as uuidValidate } from "uuid";
 
 // ── Device ID generation ─────────────────────────────────────────────────────
 
@@ -30,14 +31,16 @@ export function generateTxId(): string {
 
 // ── Email resolution ─────────────────────────────────────────────────────────
 
+export const LOCAL_EMAIL_DOMAIN = "@teleduo.local";
+
 export function resolveEmail(username: string): string {
   if (username.includes("@")) return username;
-  return `${username}@teleduo.local`;
+  return `${username}${LOCAL_EMAIL_DOMAIN}`;
 }
 
 export function extractUsername(email: string): string {
-  if (email.endsWith("@teleduo.local")) {
-    return email.replace("@teleduo.local", "");
+  if (email.endsWith(LOCAL_EMAIL_DOMAIN)) {
+    return email.replace(LOCAL_EMAIL_DOMAIN, "");
   }
   return email;
 }
@@ -47,6 +50,10 @@ export function extractUsername(email: string): string {
 export function generateRandomUsername(): string {
   return "user_" + crypto.randomBytes(8).toString("hex");
 }
+
+// ── UUID validation ──────────────────────────────────────────────────────────
+
+export const isValidUuid = uuidValidate;
 
 // ── Multipart parser ─────────────────────────────────────────────────────────
 
