@@ -17,7 +17,8 @@ function compare(a: string, b: string): number {
   return 0;
 }
 
-function canonParams(params: Record<string, string | string[]>): string {
+/** @internal Exported for testing only. */
+export function _canonParams(params: Record<string, string | string[]>): string {
   const ks = Object.keys(params).sort(compare);
   const qs = ks
     .map((k) => {
@@ -51,7 +52,7 @@ function canonicalize(
     method.toUpperCase(),
     host.toLowerCase(),
     path,
-    canonParams(params),
+    _canonParams(params),
   ].join("\n");
 }
 
@@ -68,7 +69,7 @@ function canonicalizeV5(
     method.toUpperCase(),
     host.toLowerCase(),
     path,
-    canonParams(params),
+    _canonParams(params),
     hashString(body),
     hashString(""),
   ].join("\n");
@@ -80,6 +81,44 @@ function hashString(s: string): string {
 
 function hmacSign(skey: string, canon: string, algorithm: string): string {
   return crypto.createHmac(algorithm, skey).update(canon).digest("hex");
+}
+
+/**
+ * Produce a complete `Basic …` Authorization header value (V2 canonicalization).
+ * Matches the signature produced by the original Duo Node.js API client.
+ */
+/** @internal Exported for testing only. */
+export function _sign(
+  ikey: string,
+  skey: string,
+  method: string,
+  host: string,
+  path: string,
+  params: Record<string, string | string[]>,
+  date: string,
+): string {
+  const canon = canonicalize(method, host, path, params, date);
+  const sig = hmacSign(skey, canon, "sha512");
+  return "Basic " + Buffer.from(`${ikey}:${sig}`).toString("base64");
+}
+
+/**
+ * Produce a complete `Basic …` Authorization header value (V5 / HMAC-SHA512).
+ */
+/** @internal Exported for testing only. */
+export function _signV5(
+  ikey: string,
+  skey: string,
+  method: string,
+  host: string,
+  path: string,
+  params: Record<string, string | string[]>,
+  date: string,
+  body: string,
+): string {
+  const canon = canonicalizeV5(method, host, path, params, date, body);
+  const sig = hmacSign(skey, canon, "sha512");
+  return "Basic " + Buffer.from(`${ikey}:${sig}`).toString("base64");
 }
 
 function signaturesMatch(a: string, b: string): boolean {
