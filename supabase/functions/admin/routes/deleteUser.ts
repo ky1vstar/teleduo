@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import { supabase } from "../../_shared/supabaseClient.ts";
-import { duoError, duoSuccess, isValidUuid } from "../../_shared/helpers.ts";
+import { supabase } from "shared/supabaseClient.ts";
+import { duoError, duoSuccess, isValidUuid } from "shared/helpers.ts";
 
 // ── DELETE /admin/v1/users/:user_id ──────────────────────────────────────────
 

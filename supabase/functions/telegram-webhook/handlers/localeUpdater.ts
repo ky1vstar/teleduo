@@ -1,4 +1,4 @@
-import { supabase } from "../../_shared/supabaseClient.ts";
+import { supabase } from "shared/supabaseClient.ts";
 
 // deno-lint-ignore no-explicit-any
 export async function updateLocaleMiddleware(ctx: any, next: () => Promise<void>) {

@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import { supabase } from "../../_shared/supabaseClient.ts";
-import { extractParams, duoError, duoSuccess } from "../../_shared/helpers.ts";
+import { supabase } from "shared/supabaseClient.ts";
+import { extractParams, duoError, duoSuccess } from "shared/helpers.ts";
 
 export async function handleAuthStatus(req: Request, res: Response) {
   try {

@@ -1,6 +1,6 @@
-import { supabase } from "../../_shared/supabaseClient.ts";
-import { editPushMessage } from "../../_shared/telegram/bot.ts";
-import { t } from "../../_shared/telegram/i18n.ts";
+import { supabase } from "shared/supabaseClient.ts";
+import { editPushMessage } from "shared/telegram/bot.ts";
+import { t } from "shared/telegram/i18n.ts";
 
 // deno-lint-ignore no-explicit-any
 export async function handleCallbackQuery(ctx: any) {

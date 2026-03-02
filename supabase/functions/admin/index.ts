@@ -6,9 +6,9 @@ import express from "express";
 import type { Request, Response, NextFunction } from "express";
 import { Buffer } from "node:buffer";
 
-import { ADMIN_IKEY, ADMIN_SKEY } from "../_shared/config.ts";
-import { extractParams } from "../_shared/helpers.ts";
-import { duoSignatureMiddleware } from "../_shared/duoSignature.ts";
+import { ADMIN_IKEY, ADMIN_SKEY } from "shared/config.ts";
+import { extractParams } from "shared/helpers.ts";
+import { duoSignatureMiddleware } from "shared/duoSignature.ts";
 
 import { handleGetUsers } from "./routes/getUsers.ts";
 import { handleGetUser } from "./routes/getUser.ts";

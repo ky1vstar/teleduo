@@ -6,9 +6,9 @@ import express from "express";
 import type { Request, Response, NextFunction } from "express";
 import { Buffer } from "node:buffer";
 
-import { AUTH_IKEY, AUTH_SKEY } from "../_shared/config.ts";
-import { extractParams } from "../_shared/helpers.ts";
-import { duoSignatureMiddleware } from "../_shared/duoSignature.ts";
+import { AUTH_IKEY, AUTH_SKEY } from "shared/config.ts";
+import { extractParams } from "shared/helpers.ts";
+import { duoSignatureMiddleware } from "shared/duoSignature.ts";
 
 import { handlePing } from "./routes/ping.ts";
 import { handleCheck } from "./routes/check.ts";

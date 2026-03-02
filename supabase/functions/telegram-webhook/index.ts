@@ -7,9 +7,9 @@ import express from "express";
 import { webhookCallback } from "grammy";
 import type { Request, Response, NextFunction } from "express";
 
-import { bot } from "../_shared/telegram/bot.ts";
-import { TELEGRAM_WEBHOOK_SECRET } from "../_shared/config.ts";
-import { i18n } from "../_shared/telegram/i18n.ts";
+import { bot } from "shared/telegram/bot.ts";
+import { TELEGRAM_WEBHOOK_SECRET } from "shared/config.ts";
+import { i18n } from "shared/telegram/i18n.ts";
 import { handleStartCommand } from "./handlers/commands.ts";
 import { handleCallbackQuery } from "./handlers/callbacks.ts";
 import { updateLocaleMiddleware } from "./handlers/localeUpdater.ts";

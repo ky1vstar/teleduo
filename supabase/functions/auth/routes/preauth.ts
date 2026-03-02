@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import crypto from "node:crypto";
-import { supabase } from "../../_shared/supabaseClient.ts";
+import { supabase } from "shared/supabaseClient.ts";
 import {
   extractParams,
   resolveEmail,
@@ -8,7 +8,7 @@ import {
   resolvePublicBaseUrl,
   duoError,
   duoSuccess,
-} from "../../_shared/helpers.ts";
+} from "shared/helpers.ts";
 
 // ── Build portal enrollment response ─────────────────────────────────────────
 

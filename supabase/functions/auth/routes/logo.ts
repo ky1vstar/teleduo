@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { Buffer } from "node:buffer";
-import { LOGO_URL } from "../../_shared/config.ts";
-import { duoError } from "../../_shared/helpers.ts";
+import { LOGO_URL } from "shared/config.ts";
+import { duoError } from "shared/helpers.ts";
 
 export async function handleLogo(_req: Request, res: Response) {
   try {

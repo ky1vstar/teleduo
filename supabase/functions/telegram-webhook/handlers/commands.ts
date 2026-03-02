@@ -1,5 +1,5 @@
-import { supabase } from "../../_shared/supabaseClient.ts";
-import { generateDeviceId } from "../../_shared/helpers.ts";
+import { supabase } from "shared/supabaseClient.ts";
+import { generateDeviceId } from "shared/helpers.ts";
 
 // deno-lint-ignore no-explicit-any
 export async function handleStartCommand(ctx: any) {

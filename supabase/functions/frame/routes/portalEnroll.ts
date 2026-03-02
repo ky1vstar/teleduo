@@ -1,18 +1,13 @@
 import type { Request, Response } from "express";
-import { supabase } from "../../_shared/supabaseClient.ts";
-import { getBotUsername } from "../../_shared/telegram/bot.ts";
+import { supabase } from "shared/supabaseClient.ts";
+import { getBotUsername } from "shared/telegram/bot.ts";
 import {
   generateActivationCode,
   resolveEmail,
-} from "../../_shared/helpers.ts";
+} from "shared/helpers.ts";
 
-const EXPIRED_HTML = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Enrollment link expired</title>
-<style>body{font-family:system-ui,sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f5f5f5}
-.card{background:#fff;border-radius:8px;padding:40px;max-width:420px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.1)}
-h1{font-size:22px;margin:0 0 12px}p{color:#666;margin:0}</style></head>
-<body><div class="card"><h1>Enrollment link expired</h1>
-<p>Your enrollment link sent by email has expired. Contact your IT help desk for a new link.</p></div></body></html>`;
+const EXPIRED_TEXT =
+  "Enrollment link expired\n\nYour enrollment link has expired. Contact your IT help desk for a new link.";
 
 export async function handlePortalEnroll(req: Request, res: Response) {
   try {
@@ -25,9 +20,9 @@ export async function handlePortalEnroll(req: Request, res: Response) {
       .eq("code", code)
       .maybeSingle();
 
-    if (!portalData) return res.status(200).send(EXPIRED_HTML);
+    if (!portalData) return res.type("text").status(200).send(EXPIRED_TEXT);
     if (new Date(portalData.expires_at) < new Date()) {
-      return res.status(200).send(EXPIRED_HTML);
+      return res.type("text").status(200).send(EXPIRED_TEXT);
     }
 
     // Reuse existing enrollment if already created for this portal code

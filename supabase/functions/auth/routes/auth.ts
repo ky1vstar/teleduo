@@ -1,8 +1,8 @@
 import type { Request, Response } from "express";
 import "@supabase/functions-js/edge-runtime.d.ts";
-import { supabase } from "../../_shared/supabaseClient.ts";
-import { sendPushMessage, editPushMessage } from "../../_shared/telegram/bot.ts";
-import { t } from "../../_shared/telegram/i18n.ts";
+import { supabase } from "shared/supabaseClient.ts";
+import { sendPushMessage, editPushMessage } from "shared/telegram/bot.ts";
+import { t } from "shared/telegram/i18n.ts";
 import {
   extractParams,
   resolveEmail,
@@ -10,7 +10,7 @@ import {
   generateTxId,
   duoError,
   duoSuccess,
-} from "../../_shared/helpers.ts";
+} from "shared/helpers.ts";
 
 // ── Background task: auto-expire Telegram message ───────────────────────────
 

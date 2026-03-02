@@ -1,6 +1,6 @@
 // ── Duo-compatible user response formatting ──────────────────────────────────
 
-import { LOCAL_EMAIL_DOMAIN } from "../../_shared/helpers.ts";
+import { LOCAL_EMAIL_DOMAIN } from "shared/helpers.ts";
 
 // deno-lint-ignore no-explicit-any
 type DbUser = Record<string, any>;

@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import { supabase } from "../../_shared/supabaseClient.ts";
-import { extractParams, duoError, isValidUuid } from "../../_shared/helpers.ts";
+import { supabase } from "shared/supabaseClient.ts";
+import { extractParams, duoError, isValidUuid } from "shared/helpers.ts";
 import { formatUser } from "./_formatUser.ts";
 
 // ── GET /admin/v1/users ──────────────────────────────────────────────────────

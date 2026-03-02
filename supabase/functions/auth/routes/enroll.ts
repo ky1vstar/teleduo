@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
-import { supabase } from "../../_shared/supabaseClient.ts";
-import { ENROLL_ALLOW_EXISTING } from "../../_shared/config.ts";
-import { getBotUsername } from "../../_shared/telegram/bot.ts";
+import { supabase } from "shared/supabaseClient.ts";
+import { ENROLL_ALLOW_EXISTING } from "shared/config.ts";
+import { getBotUsername } from "shared/telegram/bot.ts";
 import {
   extractParams,
   generateActivationCode,
@@ -10,7 +10,7 @@ import {
   resolvePublicBaseUrl,
   duoError,
   duoSuccess,
-} from "../../_shared/helpers.ts";
+} from "shared/helpers.ts";
 
 export async function handleEnroll(req: Request, res: Response) {
   try {
@@ -41,7 +41,7 @@ export async function handleEnroll(req: Request, res: Response) {
       await supabase.from("devices").delete().eq("user_id", userId);
     } else {
       const { data: authData, error: authErr } =
-        await supabase.auth.admin.createUser({ email, email_confirm: true });
+        await supabase.auth.admin.createUser({ email });
       if (authErr) throw authErr;
       userId = authData.user.id;
 

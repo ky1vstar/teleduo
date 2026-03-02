@@ -6,8 +6,10 @@
     "telegram-webhook"
   ],
   "imports": {
+    "shared/": "./_shared/",
     "express": "npm:express@4",
     "@supabase/supabase-js": "npm:@supabase/supabase-js@2",
+    "@supabase/functions-js/edge-runtime.d.ts": "jsr:@supabase/functions-js@2/edge-runtime.d.ts",
     "uuid": "npm:uuid@11",
     "qrcode": "npm:qrcode@1",
     "grammy": "npm:grammy@1",
