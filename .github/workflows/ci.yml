@@ -11,6 +11,9 @@ jobs:
     - uses: denoland/setup-deno@v2
       with:
         deno-version: 2.2.15
+    - name: Install dependencies
+      working-directory: ./supabase/functions
+      run: deno install
     - name: Run tests
       working-directory: ./supabase/functions
       run: deno test --allow-env

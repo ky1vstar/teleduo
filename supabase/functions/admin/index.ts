@@ -13,14 +13,15 @@ import { duoSignatureMiddleware } from "shared/duoSignature.ts";
 import { handleGetUsers } from "./routes/getUsers.ts";
 import { handleGetUser } from "./routes/getUser.ts";
 import { handleDeleteUser } from "./routes/deleteUser.ts";
+import { handleGetBranding, handlePostBranding } from "./routes/branding.ts";
 
 const app = express();
 
 const captureRawBody = (req: Request, _res: Response, buf: Buffer) => {
   (req as Request & { rawBody?: Buffer }).rawBody = buf;
 };
-app.use(express.json({ verify: captureRawBody as Parameters<typeof express.json>[0]["verify"] }));
-app.use(express.urlencoded({ extended: true, verify: captureRawBody as Parameters<typeof express.urlencoded>[0]["verify"] }));
+app.use(express.json({ limit: "1mb", verify: captureRawBody as Parameters<typeof express.json>[0]["verify"] }));
+app.use(express.urlencoded({ limit: "1mb", extended: true, verify: captureRawBody as Parameters<typeof express.urlencoded>[0]["verify"] }));
 
 // Fallback: capture raw body for content types not handled above (e.g. multipart)
 app.use((req: Request, _res: Response, next: NextFunction) => {
@@ -46,5 +47,7 @@ app.use(
 app.get("/admin/v1/users", handleGetUsers);
 app.get("/admin/v1/users/:user_id", handleGetUser);
 app.delete("/admin/v1/users/:user_id", handleDeleteUser);
+app.get("/admin/v1/branding", handleGetBranding);
+app.post("/admin/v1/branding", handlePostBranding);
 
 app.listen(3000);

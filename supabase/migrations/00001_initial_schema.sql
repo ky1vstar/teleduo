@@ -148,6 +148,11 @@ BEGIN
 END;
 $$;
 
+-- ── Storage: branding bucket ──────────────────────────────────────────────────
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('branding', 'branding', false);
+
 -- ── Scheduled cleanup job (every 24 hours) ───────────────────────────────────
 
 SELECT cron.schedule(
