@@ -37,8 +37,6 @@ export async function handleEnroll(req: Request, res: Response) {
         );
       }
       userId = existingUser.id;
-      // Delete existing devices for re-enrollment
-      await supabase.from("devices").delete().eq("user_id", userId);
     } else {
       const { data: authData, error: authErr } =
         await supabase.auth.admin.createUser({ email });

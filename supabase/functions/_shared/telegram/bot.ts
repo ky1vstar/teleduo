@@ -41,6 +41,21 @@ export async function sendPushMessage(
   return result.message_id;
 }
 
+/** Send a plain text message to a Telegram chat. */
+export async function sendPlainMessage(
+  chatId: number,
+  text: string,
+): Promise<void> {
+  try {
+    await bot.api.sendMessage(chatId, text);
+  } catch (err) {
+    console.warn("Failed to send Telegram message", {
+      chatId,
+      error: (err as Error).message,
+    });
+  }
+}
+
 /** Edit a Telegram message (remove buttons, show result). */
 export async function editPushMessage(
   chatId: number,

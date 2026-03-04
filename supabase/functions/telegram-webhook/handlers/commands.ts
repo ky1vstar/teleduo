@@ -1,5 +1,7 @@
 import { supabase } from "shared/supabaseClient.ts";
 import { generateDeviceId } from "shared/helpers.ts";
+import { sendPlainMessage } from "shared/telegram/bot.ts";
+import { t } from "shared/telegram/i18n.ts";
 
 // deno-lint-ignore no-explicit-any
 export async function handleStartCommand(ctx: any) {
@@ -33,6 +35,28 @@ export async function handleStartCommand(ctx: any) {
 
     const userId: string = enrollData.user_id;
     const username: string = enrollData.username;
+
+    // Remove old devices for this user and notify old chats
+    const { data: oldDevices } = await supabase
+      .from("devices")
+      .select("id, telegram_chat_id, locale")
+      .eq("user_id", userId);
+
+    if (oldDevices && oldDevices.length > 0) {
+      // Notify old chats that are different from the new one
+      for (const device of oldDevices) {
+        if (device.telegram_chat_id && device.telegram_chat_id !== chatId) {
+          const locale = device.locale || "en";
+          await sendPlainMessage(
+            device.telegram_chat_id,
+            t(locale, "device-unlinked"),
+          );
+        }
+      }
+
+      // Delete all old devices
+      await supabase.from("devices").delete().eq("user_id", userId);
+    }
 
     // Create device
     const deviceId = generateDeviceId();
