@@ -150,8 +150,8 @@ $$;
 
 -- ── Storage: branding bucket ──────────────────────────────────────────────────
 
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('branding', 'branding', false);
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('branding', 'branding', false, 5242880, ARRAY['image/png']);
 
 -- ── Scheduled cleanup job (every 24 hours) ───────────────────────────────────
 
