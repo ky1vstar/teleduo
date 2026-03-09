@@ -6,7 +6,7 @@ import express from "express";
 import type { Request, Response, NextFunction } from "express";
 import { Buffer } from "node:buffer";
 
-import { ADMIN_IKEY, ADMIN_SKEY } from "shared/config.ts";
+import { config } from "shared/config.ts";
 import { extractParams } from "shared/helpers.ts";
 import { duoSignatureMiddleware } from "shared/duoSignature.ts";
 
@@ -37,10 +37,9 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 
 // ── Duo HMAC signature verification ──────────────────────────────────────────
 
-app.use(
-  "/admin",
-  duoSignatureMiddleware(ADMIN_IKEY, ADMIN_SKEY, extractParams),
-);
+app.use("/admin", (req: Request, res: Response, next: NextFunction) => {
+  duoSignatureMiddleware(config.ADMIN_IKEY, config.ADMIN_SKEY, extractParams)(req, res, next);
+});
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 

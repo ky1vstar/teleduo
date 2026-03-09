@@ -1,5 +1,4 @@
 import type { Request, Response } from "express";
-import "@supabase/functions-js/edge-runtime.d.ts";
 import { supabase } from "shared/supabaseClient.ts";
 import { sendPushMessage, editPushMessage } from "shared/telegram/bot.ts";
 import { t } from "shared/telegram/i18n.ts";

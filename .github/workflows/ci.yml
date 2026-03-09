@@ -11,9 +11,16 @@ jobs:
     - uses: denoland/setup-deno@v2
       with:
         deno-version: 2.2.15
+    - uses: supabase/setup-cli@v1
+      with:
+        version: latest
+    - name: Start Supabase
+      run: supabase start
+    - name: Setup environment
+      run: supabase status -o env > supabase/functions/.env.test
     - name: Install dependencies
       working-directory: ./supabase/functions
       run: deno install
     - name: Run tests
       working-directory: ./supabase/functions
-      run: deno test --allow-env
+      run: deno test --allow-all --trace-leaks

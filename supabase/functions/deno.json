@@ -5,6 +5,9 @@
     "frame",
     "telegram-webhook"
   ],
+  "compilerOptions": {
+    "types": ["./_shared/globals.d.ts"]
+  },
   "imports": {
     "shared/": "./_shared/",
     "express": "npm:express@4",

@@ -1,10 +1,10 @@
 import { Bot } from "grammy";
-import { TELEGRAM_BOT_TOKEN } from "../config.ts";
+import { config } from "../config.ts";
 import { t, MyContext } from "./i18n.ts";
 
 // ── Bot initialization ──────────────────────────────────────────────────────
 
-export const bot = new Bot<MyContext>(TELEGRAM_BOT_TOKEN);
+export const bot = new Bot<MyContext>(config.TELEGRAM_BOT_TOKEN);
 
 // ── Cached bot username (from getMe) ─────────────────────────────────────────
 

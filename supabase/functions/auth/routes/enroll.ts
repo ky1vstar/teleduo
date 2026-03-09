@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { supabase } from "shared/supabaseClient.ts";
-import { ENROLL_ALLOW_EXISTING } from "shared/config.ts";
+import { config } from "shared/config.ts";
 import { getBotUsername } from "shared/telegram/bot.ts";
 import {
   extractParams,
@@ -28,7 +28,7 @@ export async function handleEnroll(req: Request, res: Response) {
     let userId: string;
 
     if (existingUser) {
-      if (!ENROLL_ALLOW_EXISTING) {
+      if (!config.ENROLL_ALLOW_EXISTING) {
         return duoError(
           res,
           40002,
