@@ -12,8 +12,13 @@ jobs:
       with:
         deno-version: 2.2.15
     - uses: supabase/setup-cli@v1
+      id: setup-supabase
       with:
         version: latest
+    - name: Cache Docker images
+      uses: ScribeMD/docker-cache@0.5.0
+      with:
+        key: docker-supabase-${{ runner.os }}-${{ steps.setup-supabase.outputs.version }}
     - name: Start Supabase
       run: supabase start
     - name: Setup environment
@@ -23,4 +28,4 @@ jobs:
       run: deno install
     - name: Run tests
       working-directory: ./supabase/functions
-      run: deno test --allow-all --trace-leaks
+      run: deno test --allow-all

@@ -30,6 +30,11 @@ app.use(express.urlencoded({ extended: true, verify: captureRawBody as Parameter
 // Fallback: capture raw body for content types not handled above (e.g. multipart)
 app.use((req: Request, _res: Response, next: NextFunction) => {
   if ((req as Request & { rawBody?: Buffer }).rawBody !== undefined) return next();
+  // Skip body reading for requests without a body to avoid Deno AbortError
+  if (!req.headers["content-length"] && !req.headers["transfer-encoding"]) {
+    (req as Request & { rawBody?: Buffer }).rawBody = Buffer.alloc(0);
+    return next();
+  }
   const chunks: Uint8Array[] = [];
   req.on("data", (chunk: Uint8Array) => chunks.push(chunk));
   req.on("end", () => {
