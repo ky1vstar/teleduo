@@ -11,3 +11,12 @@ Deno.env.set("ADMIN_IKEY", "DIYYYYYYYYYYYYYYYYYY");
 Deno.env.set("ADMIN_SKEY", "beefdeadbeefdeadbeefdeadbeefdeadbeefdead");
 Deno.env.set("TELEGRAM_BOT_TOKEN", "sampleToken");
 Deno.env.delete("TELEGRAM_WEBHOOK_SECRET");
+
+// Polyfill EdgeRuntime for tests (only available in Supabase Edge Runtime)
+if (typeof globalThis.EdgeRuntime === "undefined") {
+  (globalThis as Record<string, unknown>).EdgeRuntime = {
+    waitUntil(_promise: Promise<unknown>) {
+      // no-op in test environment
+    },
+  };
+}

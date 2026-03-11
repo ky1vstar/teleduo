@@ -10,9 +10,8 @@ import {
 import { createHttpsInterceptor } from "../shared/httpsInterceptor.ts";
 import { createDuoClient, SIGNATURE_VERSION_2, SIGNATURE_VERSION_5 } from "../shared/duoClient.ts";
 import app from "../../auth/app.ts";
+import { config } from "shared/config.ts";
 
-const IKEY = "DIXXXXXXXXXXXXXXXXXX";
-const SKEY = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 const IKEY_INVALID = "DIYYYYYYYYYYYYYYY";
 const SKEY_INVALID = "beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 const API_HOSTNAME = "api_hostname";
@@ -28,27 +27,22 @@ describe("/auth/v2/check", () => {
         await interceptor[Symbol.asyncDispose]();
     });
 
-    beforeEach(() => {
-        Deno.env.set("AUTH_IKEY", IKEY);
-        Deno.env.set("AUTH_SKEY", SKEY);
-    });
-
     it("responds with 200 OK for signature version 2", async () => {
-        const client = createDuoClient(IKEY, SKEY, API_HOSTNAME, SIGNATURE_VERSION_2);
+        const client = createDuoClient(config.AUTH_IKEY, config.AUTH_SKEY, API_HOSTNAME, SIGNATURE_VERSION_2);
 
         const resp = await client.jsonApiCallAsync("GET", "/auth/v2/check", {});
         assertEquals(resp.stat, "OK");
     });
 
     it("responds with 200 OK for signature version 5", async () => {
-        const client = createDuoClient(IKEY, SKEY, API_HOSTNAME, SIGNATURE_VERSION_5);
+        const client = createDuoClient(config.AUTH_IKEY, config.AUTH_SKEY, API_HOSTNAME, SIGNATURE_VERSION_5);
 
         const resp = await client.jsonApiCallAsync("GET", "/auth/v2/check", {});
         assertEquals(resp.stat, "OK");
     });
 
     it("responds with 401 Unauthorized for invalid IKEY", async () => {
-        const client = createDuoClient(IKEY_INVALID, SKEY, API_HOSTNAME);
+        const client = createDuoClient(IKEY_INVALID, config.AUTH_SKEY, API_HOSTNAME);
 
         const resp = await client.jsonApiCallAsync("GET", "/auth/v2/check", {});
         assertEquals(resp.stat, "FAIL");
@@ -56,7 +50,7 @@ describe("/auth/v2/check", () => {
     });
 
     it("responds with 401 Unauthorized for invalid SKEY", async () => {
-        const client = createDuoClient(IKEY, SKEY_INVALID, API_HOSTNAME);
+        const client = createDuoClient(config.AUTH_IKEY, SKEY_INVALID, API_HOSTNAME);
 
         const resp = await client.jsonApiCallAsync("GET", "/auth/v2/check", {});
         assertEquals(resp.stat, "FAIL");

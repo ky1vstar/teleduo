@@ -12,7 +12,6 @@ jobs:
       with:
         deno-version: 2.2.15
     - uses: supabase/setup-cli@v1
-      id: setup-supabase
       with:
         version: latest
     - name: Start Supabase
