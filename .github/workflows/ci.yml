@@ -15,10 +15,6 @@ jobs:
       id: setup-supabase
       with:
         version: latest
-    - name: Cache Docker images
-      uses: AndreKurait/docker-cache@0.6.0
-      with:
-        key: docker-supabase-${{ runner.os }}-${{ steps.setup-supabase.outputs.version }}
     - name: Start Supabase
       run: supabase start
     - name: Setup environment
