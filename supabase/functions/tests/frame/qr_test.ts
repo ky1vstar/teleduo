@@ -6,7 +6,6 @@ import {
   describe,
   it,
 } from "jsr:@std/testing@1/bdd";
-import { createHttpsInterceptor } from "../shared/httpsInterceptor.ts";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 

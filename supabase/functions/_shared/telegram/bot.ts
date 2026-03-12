@@ -4,7 +4,11 @@ import { t, MyContext } from "./i18n.ts";
 
 // ── Bot initialization ──────────────────────────────────────────────────────
 
-export const bot = new Bot<MyContext>(config.TELEGRAM_BOT_TOKEN);
+export const bot = new Bot<MyContext>(config.TELEGRAM_BOT_TOKEN, {
+  client: {
+    environment: config.TELEGRAM_ENVIRONMENT,
+  }
+});
 
 // ── Cached bot username (from getMe) ─────────────────────────────────────────
 

@@ -11,6 +11,7 @@ export const config = {
 
   get TELEGRAM_BOT_TOKEN() { return Deno.env.get("TELEGRAM_BOT_TOKEN") ?? ""; },
   get TELEGRAM_WEBHOOK_SECRET() { return Deno.env.get("TELEGRAM_WEBHOOK_SECRET") ?? ""; },
+  get TELEGRAM_ENVIRONMENT(): "prod" | "test" { return (Deno.env.get("TELEGRAM_ENVIRONMENT") as "prod" | "test") ?? "prod"; },
 
   get ENROLL_ALLOW_EXISTING() { return Deno.env.get("ENROLL_ALLOW_EXISTING") === "true"; },
 };

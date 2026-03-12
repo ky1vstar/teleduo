@@ -36,7 +36,7 @@ describe("GET /admin/v1/users", () => {
   });
 
   it("returns list of users", async () => {
-    const user = await createTestUser();
+    await createTestUser();
     const resp = await duoClient.jsonApiCallAsync(
       "GET",
       "/admin/v1/users",

@@ -96,5 +96,10 @@ if [[ -n "${TELEGRAM_WEBHOOK_SECRET:-}" ]]; then
   echo "Using secret_token for webhook"
 fi
 
-curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
+TG_API_URL="https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}"
+if [[ "${TELEGRAM_ENVIRONMENT:-}" == "test" ]]; then
+  TG_API_URL+="/test"
+  echo "Using Telegram test environment"
+fi
+curl -s -X POST "${TG_API_URL}/setWebhook" \
   -d "${WEBHOOK_ARGS}" | jq .

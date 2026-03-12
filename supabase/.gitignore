@@ -8,3 +8,6 @@
 .env.local
 .env.*.local
 .env.test
+
+# Deno
+coverage/
