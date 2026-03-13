@@ -7,6 +7,8 @@ TeleDuo replaces Duo Mobile with a Telegram bot — users approve or deny login 
 > [!NOTE]
 > This project was entirely vibe-coded from start to finish. It was built out of a simple desire to have Duo-style 2FA push notifications delivered straight into Telegram when logging in to Authentik — without needing Duo Mobile or a Duo subscription.
 
+https://raw.githubusercontent.com/ky1vstar/teleduo/refs/heads/master/assets/demo.mov
+
 ---
 
 ## Why Supabase (and not a self-hosted server)?
